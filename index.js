@@ -1,23 +1,17 @@
 import inquirer from "inquirer";
 import qr from "qr-image";
 import fs from "fs";
+import { pipeline } from "stream/promises";
 
-inquirer
-  .prompt([
-    {
-      message: "Enter your URL:",
-      name: "url",
-    },
-  ])
-  .then((answers) => {
-    const qrImage = qr.image(answers.url);
-    qrImage.pipe(fs.createWriteStream("qr_img.png"));
+const { url } = await inquirer.prompt([
+  {
+    message: "Enter your URL:",
+    name: "url",
+    validate: (input) => input.trim().length > 0 || "URL cannot be empty",
+  },
+]);
 
-    fs.writeFile("URL.txt", answers.url, (err) => {
-      if (err) throw err;
-      console.log("The URL has been saved!");
-    });
-  })
-  .catch((error) => {
-    console.error("Error:", error.message);
-  });
+await Promise.all([
+  pipeline(qr.image(url), fs.createWriteStream("qr_img.png")),
+  fs.promises.writeFile("URL.txt", url),
+]);
